@@ -5,8 +5,8 @@ import pytest
 import torch
 from PIL import Image
 
-from src.constants import CLASS_NAMES
-from src.explainability import (
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.explainability import (
     CLIPReportGenerator,
     _describe_focus_region,
     generate_template_report,
@@ -139,7 +139,7 @@ def test_experimental_prompts_use_recorded_outputs_without_anatomical_heuristics
 @pytest.mark.parametrize("override", ["auto", " AUTO ", "", None])
 def test_report_generator_auto_device_uses_shared_selection(monkeypatch, override):
     selector = Mock(return_value=torch.device("mps"))
-    monkeypatch.setattr("src.explainability.get_device", selector)
+    monkeypatch.setattr("brain_mri.explainability.get_device", selector)
     assert CLIPReportGenerator(device=override)._get_device() == torch.device("mps")
     selector.assert_called_once_with()
 
@@ -147,14 +147,14 @@ def test_report_generator_auto_device_uses_shared_selection(monkeypatch, overrid
 @pytest.mark.parametrize("override,expected", [("cpu", "cpu"), (" CUDA:1 ", "cuda:1"), ("mps", "mps")])
 def test_report_generator_preserves_explicit_device(monkeypatch, override, expected):
     selector = Mock(side_effect=AssertionError("Explicit device must bypass auto selection"))
-    monkeypatch.setattr("src.explainability.get_device", selector)
+    monkeypatch.setattr("brain_mri.explainability.get_device", selector)
     assert CLIPReportGenerator(device=override)._get_device() == torch.device(expected)
     selector.assert_not_called()
 
 
 def test_report_generator_invalid_device_warns_and_uses_shared_selection(monkeypatch, caplog):
     selector = Mock(return_value=torch.device("cpu"))
-    monkeypatch.setattr("src.explainability.get_device", selector)
+    monkeypatch.setattr("brain_mri.explainability.get_device", selector)
     assert CLIPReportGenerator(device="not-a-device")._get_device() == torch.device("cpu")
     selector.assert_called_once_with()
     assert "Invalid device string 'not-a-device'; falling back to auto device." in caplog.text

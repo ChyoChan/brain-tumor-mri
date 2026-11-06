@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from src.constants import CLASS_NAMES
+from brain_mri.constants import CLASS_NAMES
 
 
 def sha256_file(path: str | Path) -> str:

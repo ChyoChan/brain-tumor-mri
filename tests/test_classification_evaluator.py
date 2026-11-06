@@ -4,10 +4,10 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image
 
-import app.inference as inference
+import brain_mri.pipeline as inference
 from scripts import eval_classification
-from src.constants import CLASS_NAMES
-from src.data_splits import create_classification_manifest
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.data.splits import create_classification_manifest
 
 
 @pytest.mark.parametrize("mode", ["full", "dual", "cropped"])

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.data_splits import create_classification_manifest
+from brain_mri.data.splits import create_classification_manifest
 
 
 def main(argv: list[str] | None = None) -> None:

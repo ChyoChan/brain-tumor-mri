@@ -6,10 +6,10 @@ import pytest
 import torch
 from PIL import Image
 
-import app.inference as inference
-from src.checkpoints import load_metadata, save_metadata
-from src.constants import CLASS_NAMES
-from src.calibration import save_temperature_artifact
+import brain_mri.pipeline as inference
+from brain_mri.checkpoints import load_metadata, save_metadata
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.calibration import save_temperature_artifact
 
 
 def test_metadata_is_bound_to_weights_and_class_order(tmp_path):

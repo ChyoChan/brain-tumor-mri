@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from src.constants import CLASS_NAMES
+from brain_mri.constants import CLASS_NAMES
 
 
 def _validated(logits, labels=None):

@@ -12,7 +12,7 @@ import yaml
 
 
 def project_root() -> Path:
-    """Return the repository root (parent of src/)."""
+    """Return the repository root containing configs/, data/, and models/."""
     return Path(__file__).resolve().parents[1]
 
 

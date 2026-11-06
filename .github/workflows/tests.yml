@@ -31,4 +31,4 @@ jobs:
       - name: Run tests without private datasets or weights
         run: python -m pytest tests -q
       - name: Check Python sources
-        run: python -m compileall -q src app scripts
+        run: python -m compileall -q brain_mri app scripts

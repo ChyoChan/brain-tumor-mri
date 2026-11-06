@@ -1,4 +1,4 @@
-"""Single-image inference for the local frontend."""
+"""Shared segmentation, classification, and explanation pipeline."""
 
 from __future__ import annotations
 
@@ -17,19 +17,21 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-from src.classification import build_resnet50, build_resnet50_dual_input, get_val_transforms
-from src.constants import CLASS_NAMES
-from src.checkpoints import classification_path, load_metadata, sha256_file
-from src.calibration import load_temperature_artifact, temperature_probabilities
-from src.explainability import (
+from brain_mri.models.classification import build_resnet50, build_resnet50_dual_input
+from brain_mri.data.classification import get_val_transforms
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.checkpoints import classification_path, load_metadata, sha256_file
+from brain_mri.calibration import load_temperature_artifact, temperature_probabilities
+from brain_mri.explainability import (
     compute_stage_consistency_iou,
     generate_gradcam,
     generate_template_report,
     overlay_gradcam,
 )
-from src.roi import crop_tumor_region
-from src.segmentation import build_segmentation_model, predict_mask
-from src.utils import get_device, load_config, project_root
+from brain_mri.data.roi import crop_tumor_region
+from brain_mri.models.segmentation import build_segmentation_model
+from brain_mri.inference import predict_mask
+from brain_mri.utils import get_device, load_config, project_root
 
 logger = logging.getLogger(__name__)
 

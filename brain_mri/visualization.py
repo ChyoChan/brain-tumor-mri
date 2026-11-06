@@ -11,7 +11,7 @@ from matplotlib.patches import Rectangle
 import numpy as np
 import seaborn as sns
 
-from src.constants import CLASS_NAMES
+from brain_mri.constants import CLASS_NAMES
 
 
 def plot_confusion_matrix(

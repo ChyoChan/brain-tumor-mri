@@ -5,7 +5,7 @@ import pytest
 
 pytest.importorskip("seaborn")
 
-from src.visualization import _wrap_text, refine_panel_mask
+from brain_mri.visualization import _wrap_text, refine_panel_mask
 
 
 def test_display_mask_removes_speckles_fills_holes_and_keeps_largest_region():

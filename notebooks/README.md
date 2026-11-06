@@ -1,4 +1,4 @@
-Experiment notebooks. Training and models live in `src/`; use `scripts/` to rerun without Colab.
+Experiment notebooks. Shared code lives in `brain_mri/` (`data/`, `models/`, and `training/`); use `scripts/` to rerun without Colab.
 
 The main notebook imports shared patch generation, the dual-input dataset, and
 the ResNet50 builder. New patches are stored in
@@ -8,3 +8,6 @@ Each crop is a lossless PNG named after the original filename plus `.png`
 inference. Shared lookup helpers map these names back to the original image.
 Retraining can therefore produce different results from the archived metrics
 and checkpoints.
+
+Baseline metrics are written to `outputs/metrics/resnet50_full_test_metrics.json`.
+Historical VLM comparison CSVs are stored in `outputs/metrics/vlm/`.

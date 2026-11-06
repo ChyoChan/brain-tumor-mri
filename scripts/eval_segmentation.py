@@ -15,13 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.preprocessing import (
+from brain_mri.data.preprocessing import (
     SegmentationDataset,
     discover_image_mask_pairs,
     stratified_split_pairs,
 )
-from src.segmentation import build_segmentation_model, evaluate_segmentation
-from src.utils import get_device, load_config, seed_everything
+from brain_mri.models.segmentation import build_segmentation_model
+from brain_mri.training.segmentation import evaluate_segmentation
+from brain_mri.utils import get_device, load_config, seed_everything
 
 
 def parse_args() -> argparse.Namespace:

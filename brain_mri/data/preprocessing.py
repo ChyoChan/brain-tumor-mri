@@ -17,8 +17,8 @@ from torch.utils.data import Dataset
 if TYPE_CHECKING:
     import albumentations as A
 
-from src.constants import CLASS_NAMES, CLASS_TO_IDX, FOLDER_ALIASES, IMAGE_EXTS
-from src.roi import crop_tumor_region
+from brain_mri.constants import CLASS_NAMES, CLASS_TO_IDX, FOLDER_ALIASES, IMAGE_EXTS
+from brain_mri.data.roi import crop_tumor_region
 
 
 # ------------------------------------------------------------------ #
@@ -444,7 +444,7 @@ class SegmentationDataset(Dataset):
         return img_tensor, mask_tensor
 
 
-# crop_tumor_region lives in src.roi and is re-exported above.
+# crop_tumor_region lives in brain_mri.data.roi and is re-exported above.
 
 # ------------------------------------------------------------------ #
 #  Classification patches from predicted tumor ROIs
@@ -468,7 +468,7 @@ def generate_classification_patches(
     from PIL import Image as PILImage
     from tqdm.auto import tqdm
 
-    from src.segmentation import predict_mask
+    from brain_mri.inference import predict_mask
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)

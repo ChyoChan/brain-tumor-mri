@@ -2,8 +2,12 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from src.preprocessing import generate_classification_patches, get_seg_train_transforms, get_seg_val_transforms
-from src.roi import crop_tumor_region
+from brain_mri.data.preprocessing import (
+    generate_classification_patches,
+    get_seg_train_transforms,
+    get_seg_val_transforms,
+)
+from brain_mri.data.roi import crop_tumor_region
 
 
 def test_patch_generation_does_not_use_ground_truth_to_choose_crop(monkeypatch, tmp_path):
@@ -12,7 +16,7 @@ def test_patch_generation_does_not_use_ground_truth_to_choose_crop(monkeypatch, 
     Image.fromarray(pixels).save(image_path)
     mask = np.zeros_like(pixels)
     mask[4:12, 6:10] = 1
-    monkeypatch.setattr("src.segmentation.predict_mask", lambda *args: mask)
+    monkeypatch.setattr("brain_mri.inference.predict_mask", lambda *args: mask)
 
     patches = generate_classification_patches(
         [(str(image_path), 0), (str(image_path), 3)],
@@ -38,7 +42,7 @@ def test_jpeg_sources_produce_lossless_patches_matching_inference(monkeypatch, t
     mask = np.zeros_like(decoded)
     if with_mask:
         mask[6:18, 7:16] = 1
-    monkeypatch.setattr("src.segmentation.predict_mask", lambda *args: mask)
+    monkeypatch.setattr("brain_mri.inference.predict_mask", lambda *args: mask)
     patches = generate_classification_patches(
         [(str(source), 0)], seg_model=object(), device="cpu",
         output_dir=str(tmp_path / "patches"), output_size=(16, 16), margin=0,

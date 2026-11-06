@@ -14,13 +14,14 @@ if str(ROOT) not in sys.path:
 
 from torch.utils.data import DataLoader
 
-from src.preprocessing import (
+from brain_mri.data.preprocessing import (
     SegmentationDataset,
     discover_image_mask_pairs,
     stratified_split_pairs,
 )
-from src.segmentation import build_segmentation_model, train_unet
-from src.utils import get_device, load_config, seed_everything
+from brain_mri.models.segmentation import build_segmentation_model
+from brain_mri.training.segmentation import train_unet
+from brain_mri.utils import get_device, load_config, seed_everything
 
 
 def parse_args() -> argparse.Namespace:

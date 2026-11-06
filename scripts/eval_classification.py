@@ -18,13 +18,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.calibration import (
+from brain_mri.calibration import (
     calibration_metrics, fit_temperature, load_temperature_artifact,
     save_temperature_artifact, temperature_probabilities,
 )
-from src.checkpoints import load_metadata
-from src.constants import CLASS_NAMES
-from src.data_splits import file_sha256, load_classification_manifest
+from brain_mri.checkpoints import load_metadata
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.data.splits import file_sha256, load_classification_manifest
 
 
 def _write_reliability_plot(path: Path, before: dict, after: dict) -> None:
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("Choose --temperature or --fit-temperature")
 
     split = load_classification_manifest(args.manifest, args.data_dir)
-    from app.inference import PipelineRuntime
+    from brain_mri.pipeline import PipelineRuntime
 
     classification = {}
     if args.full_checkpoint:

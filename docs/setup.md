@@ -77,6 +77,7 @@ metadata; they must not be substituted under an old checkpoint's checksum.
 python -m pip install -r requirements.txt
 python -m pip check
 PYTHONPATH=. python -m pytest tests -q
+python -m compileall -q brain_mri app scripts
 ```
 
 `.github/workflows/tests.yml` runs these checks on pushes and pull requests using

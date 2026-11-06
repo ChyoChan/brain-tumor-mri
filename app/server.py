@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.inference import MAX_IMAGE_PIXELS, PipelineRuntime
+from brain_mri.pipeline import MAX_IMAGE_PIXELS, PipelineRuntime
 
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024

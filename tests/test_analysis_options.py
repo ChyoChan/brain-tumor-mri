@@ -9,8 +9,8 @@ import torch.nn as nn
 from fastapi.testclient import TestClient
 from PIL import Image
 
-import app.inference as inference
-from app.inference import PipelineRuntime
+import brain_mri.pipeline as inference
+from brain_mri.pipeline import PipelineRuntime
 from app.server import app, get_runtime
 
 

@@ -14,8 +14,8 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-from src.constants import CLASS_NAMES
-from src.utils import get_device
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.utils import get_device
 
 logger = logging.getLogger(__name__)
 

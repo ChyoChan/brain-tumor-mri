@@ -9,20 +9,24 @@ This folder is the GitHub-ready copy. Large datasets and `.pth` checkpoints stay
 ## Layout
 
 ```text
-configs/                 pipeline hyperparameters
-src/                     training, models, data, reports
-  constants.py           class names and folder aliases
-  preprocessing.py       image/mask discovery, splits, ROI crop, patches
-  segmentation.py        UNet, ResUNet, AttentionUNet, train/eval
-  classification.py      ResNet50, dual-input dataset, train/eval
+brain_mri/               shared Python implementation
+  data/                  image discovery, datasets, preprocessing, frozen splits
+  models/                U-Net variants and ResNet50 builders
+  training/              losses, training loops, evaluation, hyperparameter search
+  inference.py           segmentation mask prediction
+  pipeline.py            deployed multi-stage inference shared by the UI and evaluator
   explainability.py      Grad-CAM and VLM/template reports
   visualization.py       figures and qualitative panels
+  constants.py           class names and folder aliases
   utils.py               seed, device, config, meters
+configs/                 pipeline hyperparameters
 scripts/                 CLI entry points (no Colab required)
-app/                     local FastAPI UI
-notebooks/               experiment logs; import from src/
+app/                     local FastAPI server and static frontend
+notebooks/               experiment logs; import from brain_mri/
 outputs/metrics/         saved scores (checked in)
-data/ and models/        local only, not committed
+  vlm/                   historical VLM evaluation CSVs
+models/checkpoints.json  checkpoint download/checksum manifest
+data/ and models/        local datasets, generated patches, and trained weights
 ```
 
 ## Setup
@@ -109,7 +113,7 @@ received the full image in both input views. The frontend now reproduces that
 contract without ground-truth labels by running the full-image ResNet50 as a
 no-tumor gate before the dual-input ResNet50. A future retrained dual checkpoint
 should use the corrected, label-independent patch generation in
-`src/preprocessing.py`.
+`brain_mri/data/preprocessing.py`.
 
 Displayed percentages are softmax model scores, not calibrated clinical
 probabilities. The included demo images are members of the deterministic held-out
@@ -133,7 +137,7 @@ python scripts/train_classification.py --mode dual --manifest data/processed/cla
 python scripts/eval_segmentation.py --checkpoint models/segmentation/best_unet.pth
 ```
 
-Notebooks under `notebooks/` still run against the same `src/` modules. Prefer the scripts for a clean rerun.
+Notebooks under `notebooks/` still run against the same `brain_mri/` modules. Prefer the scripts for a clean rerun.
 
 ## Frozen classification evaluation and calibration
 
@@ -207,7 +211,8 @@ with retrained segmenters must be rerun.
 - `outputs/figures` and Grad-CAM dumps
 - `Report/` and `Final_Report/` (proposal, milestone, paper)
 
-Keep `outputs/metrics/*.json` and `vlm_eval/*.csv`; those are the reported numbers.
+Keep `outputs/metrics/*.json` and `outputs/metrics/vlm/*.csv`; those are the reported numbers.
+The original full-image baseline score is `outputs/metrics/resnet50_full_test_metrics.json`.
 
 ## Course materials
 

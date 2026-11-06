@@ -15,22 +15,20 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.classification import (
+from brain_mri.data.classification import (
     BrainTumorDataset,
     DualInputBrainTumorDataset,
     build_original_lookup,
-    build_resnet50,
-    build_resnet50_dual_input,
-    compute_class_weights,
     get_train_transforms,
     get_val_transforms,
-    train_classifier,
 )
-from src.constants import CLASS_NAMES
-from src.data_splits import load_classification_manifest
-from src.checkpoints import classification_path, sha256_file
-from src.segmentation import build_segmentation_model
-from src.utils import get_device, load_config, seed_everything
+from brain_mri.models.classification import build_resnet50, build_resnet50_dual_input
+from brain_mri.training.classification import compute_class_weights, train_classifier
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.data.splits import load_classification_manifest
+from brain_mri.checkpoints import classification_path, sha256_file
+from brain_mri.models.segmentation import build_segmentation_model
+from brain_mri.utils import get_device, load_config, seed_everything
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,7 +76,7 @@ def main() -> None:
         model = build_resnet50(cfg["dataset"]["num_classes"], cls_cfg["pretrained"])
         train_labels = [label for _, label in train_ds.samples]
     else:
-        from src.preprocessing import generate_classification_patches
+        from brain_mri.data.preprocessing import generate_classification_patches
 
         ckpt = args.seg_checkpoint or str(ROOT / cfg["segmentation"]["save_path"])
         seg_model = build_segmentation_model(

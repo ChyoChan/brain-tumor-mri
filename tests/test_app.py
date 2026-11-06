@@ -8,9 +8,9 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.server import MAX_UPLOAD_BYTES, app, get_runtime
-from app.inference import PipelineRuntime, _build_dual_batch
-from src.constants import CLASS_TO_IDX
-from src.segmentation import predict_mask
+from brain_mri.pipeline import PipelineRuntime, _build_dual_batch
+from brain_mri.constants import CLASS_TO_IDX
+from brain_mri.inference import predict_mask
 
 
 class FakeRuntime:
@@ -154,7 +154,7 @@ def test_dual_batch_uses_roi_when_gate_predicts_tumor():
 
 
 def test_classifier_loader_routes_only_known_modes(monkeypatch, tmp_path):
-    import app.inference as inference
+    import brain_mri.pipeline as inference
 
     class TinyModel(nn.Module):
         def __init__(self, channels):
@@ -184,7 +184,7 @@ def test_classifier_loader_routes_only_known_modes(monkeypatch, tmp_path):
 
 
 def test_segmentation_loader_routes_each_frontend_option(monkeypatch, tmp_path):
-    import app.inference as inference
+    import brain_mri.pipeline as inference
 
     class TinySegmentationModel(nn.Module):
         def __init__(self, model_name):

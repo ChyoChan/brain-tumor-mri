@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.calibration import (
+from brain_mri.calibration import (
     calibration_metrics, fit_temperature, load_temperature_artifact,
     save_temperature_artifact, temperature_probabilities,
 )

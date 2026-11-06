@@ -3,7 +3,7 @@ import pytest
 from PIL import Image
 from torchvision import transforms
 
-from src.classification import DualInputBrainTumorDataset, build_original_lookup
+from brain_mri.data.classification import DualInputBrainTumorDataset, build_original_lookup
 
 
 def test_lossless_patch_name_resolves_to_original_image(tmp_path):

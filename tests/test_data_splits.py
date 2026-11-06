@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.constants import CLASS_NAMES
-from src.data_splits import create_classification_manifest, load_classification_manifest
+from brain_mri.constants import CLASS_NAMES
+from brain_mri.data.splits import create_classification_manifest, load_classification_manifest
 
 
 @pytest.fixture

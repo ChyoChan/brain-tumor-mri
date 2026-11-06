@@ -1,4 +1,4 @@
-from src.segmentation import AttentionUNet
+from brain_mri.models.segmentation import AttentionUNet
 
 
 def test_attention_convolutions_keep_legacy_checkpoint_keys():

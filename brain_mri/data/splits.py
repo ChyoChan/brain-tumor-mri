@@ -12,8 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-from src.constants import CLASS_NAMES, FOLDER_ALIASES
-from src.checkpoints import sha256_file as file_sha256
+from brain_mri.constants import CLASS_NAMES, FOLDER_ALIASES
+from brain_mri.checkpoints import sha256_file as file_sha256
 
 SPLITS = ("train", "val", "test")
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
