@@ -100,7 +100,7 @@ def stratified_split_pairs(
     """
     strat_keys = [Path(img).parent.name for img, _ in pairs]
 
-    train_pairs, temp_pairs, train_keys, temp_keys = train_test_split(
+    train_pairs, temp_pairs, _, temp_keys = train_test_split(
         pairs, strat_keys,
         test_size=1 - ratios[0],
         stratify=strat_keys,

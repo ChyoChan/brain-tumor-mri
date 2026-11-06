@@ -142,7 +142,6 @@ def train_classifier(
             scheduler.step(val_loss)
 
         epoch_time = time.time() - epoch_start
-        elapsed = time.time() - train_start
         eta = epoch_time * (epochs - epoch)
 
         history["train_loss"].append(train_loss)

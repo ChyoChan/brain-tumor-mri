@@ -9,7 +9,6 @@ paths:
   processed_data_dir: "data/processed"
   segmentation_model_dir: "models/segmentation"
   classification_model_dir: "models/classification"
-  vlm_model_dir: "models/vlm"
   output_dir: "outputs"
 
 dataset:

@@ -7,7 +7,7 @@ import torch.nn as nn
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.server import MAX_UPLOAD_BYTES, app, get_runtime
+from app.server import app, get_runtime
 from brain_mri.pipeline import PipelineRuntime, _build_dual_batch
 from brain_mri.constants import CLASS_TO_IDX
 from brain_mri.inference import predict_mask
