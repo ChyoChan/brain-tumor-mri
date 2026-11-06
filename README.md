@@ -1,230 +1,253 @@
 # Brain Tumor MRI Analysis Pipeline
 
-COMP4471 term project: a three-stage pipeline for brain-tumor MRI analysis.
+[![Python checks](https://github.com/ChyoChan/brain-tumor-mri/actions/workflows/tests.yml/badge.svg)](https://github.com/ChyoChan/brain-tumor-mri/actions/workflows/tests.yml)
 
-**Raw MRI → segmentation (U-Net / ResUNet / Attention U-Net) → ROI crop → ResNet50 classification → Grad-CAM + report**
+A PyTorch research project for exploring brain MRI segmentation, four-class
+classification, and model explanations through a local web interface. Developed
+as a COMP4471 term project.
 
-This folder is the GitHub-ready copy. Large datasets and `.pth` checkpoints stay on disk locally and are ignored by git.
+**Checkpoint files and MRI images are not included.** A fresh clone can open the
+interface, but inference requires trained models. Checkpoint download URLs have
+not been published; obtain the original weights from the repository owner or
+[train your own](#train-and-evaluate).
 
-## Layout
+## What the project does
 
-```text
-brain_mri/               shared Python implementation
-  data/                  image discovery, datasets, preprocessing, frozen splits
-  models/                U-Net variants and ResNet50 builders
-  training/              losses, training loops, evaluation, hyperparameter search
-  inference.py           segmentation mask prediction
-  pipeline.py            deployed multi-stage inference shared by the UI and evaluator
-  explainability.py      Grad-CAM and VLM/template reports
-  visualization.py       figures and qualitative panels
-  constants.py           class names and folder aliases
-  utils.py               seed, device, config, meters
-configs/                 pipeline hyperparameters
-scripts/                 CLI entry points (no Colab required)
-app/                     local FastAPI server and static frontend
-notebooks/               experiment logs; import from brain_mri/
-outputs/metrics/         saved scores (checked in)
-  vlm/                   historical VLM evaluation CSVs
-models/checkpoints.json  checkpoint download/checksum manifest
-data/ and models/        local datasets, generated patches, and trained weights
-```
+Each analysis runs the selected models on the supplied image. The saved CSV/JSON
+metrics are experiment records, not the source of frontend predictions.
 
-## Setup
+| Stage | Choices | Output |
+| --- | --- | --- |
+| Segmentation | U-Net, ResUNet, Attention U-Net | Predicted mask and region-of-interest (ROI) crop |
+| Classification | Full-image ResNet50 or dual-input ResNet50 (crop + original) | Scores for glioma, meningioma, pituitary, and no tumor |
+| Explanation | Grad-CAM and an optional predefined text summary | Attention overlay and measured model outputs |
 
-Source repository: [brain-tumor-mri](https://github.com/ChyoChan/brain-tumor-mri).
+The UI defaults to **ResUNet + Full image**. Segmentation still runs in this mode
+to produce the mask and crop displayed by the viewer. Dual-input mode uses a
+full-image reference Grad-CAM; it does not directly explain the fused dual model.
+The summary runs locally without a hosted language model.
 
-Clone the public repository and enter its folder:
+This is research and educational software. Scores and attention maps do not
+establish a clinical diagnosis; scores are uncalibrated unless a compatible
+calibration artifact is configured.
+
+## Run locally
+
+Use **Python 3.11** and Git. The commands below use a macOS/Linux shell. On
+Windows, create the environment with `py -3.11 -m venv .venv` and activate it with
+`.\.venv\Scripts\Activate.ps1`; the subsequent Python commands are the same.
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/ChyoChan/brain-tumor-mri.git
 cd brain-tumor-mri
-```
-
-Create the environment:
-
-```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-runtime.txt
 ```
 
-Put the Kaggle MRI dataset under `data/raw/` (classification images plus paired segmentation masks). Trained weights go under `models/`.
+The runtime selects CUDA when available, then Apple MPS, then CPU. A GPU is
+optional. See [setup details](docs/setup.md) for dependency and CUDA notes.
 
-Use `requirements-training.txt` for training/evaluation and `requirements-dev.txt`
-for tests. `requirements.txt` includes all groups. Direct dependency versions are
-pinned, including the correct `grad-cam` package name. See [setup and checkpoint
-instructions](docs/setup.md) for environment details, CPU/CUDA notes, and
-checksum-verified weights. Original weight download URLs are not yet published;
-obtain them from the owner or train models before running inference.
+### 2. Add trained models
 
+For the default **ResUNet + Full image** settings, place these original weights
+under the project root:
 
-## Local frontend
-
-A localhost workstation UI for single-slice inference:
-
-Quick start with the existing `rag` Conda environment:
-
-```bash
-./scripts/start_frontend.command
+```text
+models/
+├── segmentation/
+│   └── best_resunet.pth
+└── classification/
+    └── pure_baseline/
+        └── best_resnet50_pure_classification.pth
 ```
 
-On macOS, double-click `scripts/start_frontend.command` in Finder to host the
-frontend locally, and `scripts/stop_frontend.command` to close the server.
-Keep the start terminal open while using the app. The stop launcher frees the
-port; it does not close browser tabs or delete project files.
-Both launchers locate the project automatically and work from any directory.
-It does not install dependencies; the selected environment must already have
-the packages from `requirements.txt`. To use a different Conda environment:
+A newly trained full-image classifier can instead use
+`models/classification/best_resnet50_full.pth` with its matching
+`best_resnet50_full.metadata.json`. Keep the metadata beside the weights. New
+classifier checkpoints take priority over the original fallback files.
+
+Other model selections need their corresponding checkpoints. The complete list
+of five original files, sizes, and SHA-256 checksums is in
+[models/checkpoints.json](models/checkpoints.json). If you have **all five original
+files**, verify them with:
 
 ```bash
-MRI_CONDA_ENV=myenv ./scripts/start_frontend.command
+python scripts/download_checkpoints.py --verify-only
 ```
 
-Or start with an already activated Python environment:
+This command checks the full original set, not just the two default models or
+newly trained weights. No automatic download is available while manifest URLs
+are `null`. See [checkpoint setup](docs/setup.md#existing-checkpoints).
+
+### 3. Start the frontend
 
 ```bash
-python -m pip install -r requirements-runtime.txt
 python scripts/run_frontend.py
 ```
 
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765). Port 8000 is left available
-for other services. Stop with **Ctrl+C** in the server terminal, or run:
+Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)**. The server binds to your
+local machine. Keep the terminal open; press **Ctrl+C** there to stop it.
+
+If the port is occupied, select another port:
 
 ```bash
-./scripts/stop_frontend.command
+python scripts/run_frontend.py --port 8766
 ```
 
-An activated Python environment can also run `python scripts/stop_frontend.py`.
-The stop script only signals this project's
-frontend on the selected port, and refuses to terminate unrelated services.
-For a custom port, use matching start/stop arguments:
+Then open `http://127.0.0.1:8766`. On macOS/Linux with `lsof` and `ps` available,
+you can also stop this project's server from another activated terminal:
 
 ```bash
-./scripts/start_frontend.command --port 8766
-./scripts/stop_frontend.command --port 8766
+python scripts/stop_frontend.py --port 8766
 ```
 
-Keep trained weights under `models/` (gitignored). If `data/raw/Classification/Testing` is present, the UI also offers one sample per class.
+The default stop port is 8765. The helper refuses to terminate unrelated services.
 
-Use **Browse local images** to select other images from that folder, filter by
-dataset class, search filenames, and page through results. Folder labels are
-dataset annotations, not predictions, and the Testing folder is not necessarily
-the same as the project's deterministic held-out evaluation split. Newly added
-local images appear after restarting the server. You can also upload any
-supported PNG, JPG, or TIFF image (up to 20 MB).
+### 4. Analyze an image
 
-Uncheck **Generate report** before analyzing to skip the template text summary.
-Segmentation, classification, and Grad-CAM still run normally. The API accepts
-`generate_report=false` in the analysis form and returns `report: null` and
-`report_generated: false`; existing callers that omit it still receive a report.
+1. Upload a PNG, JPG, or TIFF image, or choose an available local sample.
+2. Select the segmentation model and classifier whose weights you installed.
+3. Leave **Generate report** checked for the text summary, or uncheck it to skip
+   that step. Segmentation, classification, and Grad-CAM still run.
+4. Run the pipeline and inspect the original image, mask, ROI crop, class scores,
+   attention overlay, and analysis details.
 
-The full-image classifier is the recommended default. The existing dual-input
-checkpoint used label-dependent preprocessing during training: no-tumor cases
-received the full image in both input views. The frontend now reproduces that
-contract without ground-truth labels by running the full-image ResNet50 as a
-no-tumor gate before the dual-input ResNet50. A future retrained dual checkpoint
-should use the corrected, label-independent patch generation in
-`brain_mri/data/preprocessing.py`.
+Uploads support individual image slices up to **20 MB and 25 million pixels**.
+The UI does not read DICOM or NIfTI volumes. No dataset download is needed when
+you upload your own supported image and have the required weights.
 
-Displayed percentages are softmax model scores, not calibrated clinical
-probabilities. The included demo images are members of the deterministic held-out
-split (seed 42), rather than training examples.
+To enable **Browse local images**, use this optional layout:
 
-Verified locally on the 703-image held-out split:
+```text
+data/raw/Classification/Testing/
+├── glioma/
+├── meningioma/
+├── pituitary/
+└── notumor/
+```
 
-- full-image checkpoint: 99.15% accuracy
-- gated dual-input pipeline: 98.86% accuracy
-- ungated dual-input pipeline (old frontend behavior): 86.34% accuracy
+Place images inside the class folders, then restart the server. The browser
+supports class filters, filename search, and pagination. Folder labels are
+dataset annotations, not predictions. The four quick-sample cards require the
+original sample filenames; the browser works with other supported filenames.
+
+### Optional: macOS Conda launchers
+
+The Finder launchers require an **existing Conda environment** with the runtime
+requirements installed. They default to an environment named `rag`; set
+`MRI_CONDA_ENV` to use your own environment:
+
+```bash
+MRI_CONDA_ENV=myenv ./scripts/start_frontend.command
+MRI_CONDA_ENV=myenv ./scripts/stop_frontend.command
+```
+
+Both accept `--port`. They locate the project automatically and do not create an
+environment or install dependencies. The Python commands above work with the
+virtual environment used in the quick start.
 
 ## Train and evaluate
 
-From the project root:
+The main notebook downloads the combined
+[brain tumor segmentation and classification dataset](https://www.kaggle.com/datasets/indk214/brain-tumor-dataset-segmentation-and-classification).
+Obtain and extract the data separately under `data/raw/`, retaining its
+`Classification/` and `Segmentation/` folders. Dataset access and reuse follow
+the source's terms. Training settings live in
+[configs/pipeline_config.yaml](configs/pipeline_config.yaml).
+
+Install the training extras, freeze a classification split, and train models
+that the default frontend can discover:
 
 ```bash
-python scripts/train_segmentation.py --model unet
-python scripts/train_segmentation.py --model resunet
-python scripts/train_segmentation.py --model attention_unet
-python scripts/train_classification.py --mode dual --manifest data/processed/classification_split_v1.json --seg-checkpoint models/segmentation/best_unet_real_mask.pth
-python scripts/eval_segmentation.py --checkpoint models/segmentation/best_unet.pth
-```
-
-Notebooks under `notebooks/` still run against the same `brain_mri/` modules. Prefer the scripts for a clean rerun.
-
-## Frozen classification evaluation and calibration
-
-Create a split once before training. This groups byte-identical files together;
-it checks for conflicting duplicate labels and detects later dataset changes:
-
-```bash
+python -m pip install -r requirements-training.txt
 python scripts/prepare_classification_split.py --data-dir data/raw --output data/processed/classification_split_v1.json
+python scripts/train_segmentation.py --model resunet
 python scripts/train_classification.py --mode full --manifest data/processed/classification_split_v1.json
 python scripts/eval_classification.py --manifest data/processed/classification_split_v1.json --mode full --output outputs/metrics/full_evaluation.json
 ```
 
-Add `--groups-csv patients.csv` when creating the split to keep patients together.
-The CSV needs `path,patient_id` columns, paths relative to `--data-dir`, and a row
-for every image. Without it, the audit guarantees exact-file duplicate grouping,
-not patient isolation or detection of re-encoded/augmented copies. Existing split
-files are never overwritten. New splits can change the old reported scores.
+This saves `models/segmentation/best_resunet.pth` and
+`models/classification/best_resnet50_full.pth` with its metadata sidecar. The
+classifier's initial pretrained ImageNet weights may download on the first
+training run. Full-image classifier training does not need a segmenter. The
+supplied evaluator and frontend also run segmentation, so they need the selected
+segmenter's weights.
 
-Evaluation supports `--mode full`, `--mode cropped`, and `--mode dual`. Use the
-same manifest for all comparisons and pass `--seg-model`/`--seg-checkpoint` matching
-the classifier's recorded training segmenter. Metrics include accuracy, macro
-F1, per-class recall, confusion matrix, end-to-end prediction time, ECE, and NLL.
-Per-image predictions and reliability CSV/PNG files are written beside the JSON.
-Batch prediction skips reports, Grad-CAM, and preview image encoding; its timing
-covers the segmentation, crop, and classification path.
+For segmentation, provide real image/mask pairs: class folders with
+`scan.png` / `scan_mask.png`, or parallel `images/` and `masks/` trees. The training
+script falls back to Otsu pseudo-masks if real pairs are absent; those are not
+expert annotations.
 
-New training writes `best_resnet50_<mode>.pth` and a `.metadata.json` sidecar
-containing class order, preprocessing, split fingerprints and weight hashes. The
-app prefers new full/dual checkpoints automatically. Sidecars must stay with their
-weights. Legacy dual weights retain their no-tumor gate; new `roi_v1` weights use
-the label-independent crop path. New training also converts both views to
-grayscale RGB, matching the app. The UI's available segmentation choices are
-validated against a new checkpoint's recorded segmenter and checksum.
+The frozen split keeps byte-identical images together. Patient isolation needs
+a complete `path,patient_id` CSV supplied with `--groups-csv`; exact-file hashing
+does not detect re-encoded or augmented duplicates. Existing split manifests are
+not overwritten. A file's location under the UI's local `Testing/` folder does
+not establish that it belongs to the frozen test split.
 
-Fit temperature scaling on validation data after training, then evaluate once on
-test data. Fitting is refused for test data or legacy weights without a verifiable
-training split:
+Evaluation exports accuracy, macro F1, per-class recall, confusion matrices,
+calibration measures, timing, and per-image results. See
+[advanced training and calibration notes](docs/setup.md#advanced-training-and-evaluation)
+for cropped/dual models, checkpoint compatibility, and validation-only
+temperature scaling. [Experiment notebooks](notebooks/README.md) use the same
+shared Python package.
 
-```bash
-python scripts/eval_classification.py --manifest data/processed/classification_split_v1.json --split val --mode full --fit-temperature models/classification/full_temperature.json --output outputs/metrics/full_validation.json
-python scripts/eval_classification.py --manifest data/processed/classification_split_v1.json --split test --mode full --temperature models/classification/full_temperature.json --output outputs/metrics/full_calibrated_test.json
-MRI_CALIBRATION=models/classification/full_temperature.json ./scripts/start_frontend.command
+## Results and limitations
+
+The [archived full-image baseline](outputs/metrics/resnet50_full_test_metrics.json)
+records **99.15% accuracy**. Saved results describe the original experiments;
+retraining with corrected preprocessing and a newly frozen split may produce
+different scores. Patient-independent validation has not been established.
+
+[The dataset audit](outputs/metrics/dataset_audit.json) found 426 extra
+byte-identical files among 7,023 images. Current split generation groups exact
+duplicates, but this does not retroactively validate the historical scores.
+Segmentation results also depend on whether real or pseudo-masks were used.
+See [saved metrics](outputs/metrics) and the
+[results summary](outputs/results_summary.csv) for the archived outputs.
+
+## Project structure
+
+```text
+app/                     FastAPI server and browser UI
+brain_mri/               shared inference, data, models, training, and explanations
+configs/                 pipeline configuration
+scripts/                 start/stop, training, evaluation, and checkpoint commands
+notebooks/               experiment notebooks importing brain_mri/
+models/checkpoints.json  original checkpoint size/checksum manifest
+outputs/metrics/         archived metrics; vlm/ contains historical VLM experiments
+docs/setup.md            dependency, model compatibility, and calibration details
 ```
 
-Calibration artifacts are checked against the selected model, split, class order,
-and any segmenter/gate weights. An incompatible artifact is rejected. With no
-artifact configured, the app reports uncalibrated softmax scores. Temperature
-scaling does not establish clinical reliability or change the predicted class.
-Restart the frontend after replacing weights, metadata, or calibration files;
-loaded models and calibration settings are cached for the server session.
+Raw data, generated patches, model weights, reports, and generated figures stay
+local and are excluded by [.gitignore](.gitignore).
 
-The optional UI report is now a factual model summary: prediction, score type,
-segmentation pixel coverage and attention coordinates. It makes no anatomical
-or diagnostic findings from the heatmap.
+## Development checks
 
-The main notebook uses the shared, label-independent patch generator and stores
-new lossless PNG crops in `data/processed/patches_resunet_roi_v1/`. Existing saved
-metrics describe the original experiments; retraining with the corrected crops
-can produce different results.
+From the project root with the virtual environment activated:
 
-Future segmentation training and validation also use the deployed `[0, 1]`
-grayscale input range. Earlier shared training transforms used `[-1, 1]`, which
-did not match `predict_mask`. Existing weights and their serving path are
-unchanged; saved segmentation metrics are historical results, and comparisons
-with retrained segmenters must be rerun.
+```bash
+python -m pip install -r requirements.txt
+python -m pip check
+python -m pytest tests -q
+python -m compileall -q brain_mri app scripts
+```
 
-## What is not in git
+`requirements-runtime.txt` installs frontend dependencies;
+`requirements-training.txt` adds training/notebook tools;
+`requirements-dev.txt` adds test tools. `requirements.txt` includes all three.
+[GitHub Actions](https://github.com/ChyoChan/brain-tumor-mri/actions/workflows/tests.yml)
+checks dependencies, tests, and Python compilation on Linux with CPU PyTorch.
+Tests use generated fixtures and model doubles without private data or weights.
 
-- `data/raw` and `data/processed` (MRI and generated patches)
-- `models/**/*.pth`
-- `outputs/figures` and Grad-CAM dumps
-- `Report/` and `Final_Report/` (proposal, milestone, paper)
+## Troubleshooting
 
-Keep `outputs/metrics/*.json` and `outputs/metrics/vlm/*.csv`; those are the reported numbers.
-The original full-image baseline score is `outputs/metrics/resnet50_full_test_metrics.json`.
-
-## Course materials
-
-Assignments, lectures, and labs live in the parent `COMP4471/` folder and should not be pushed with this project.
+| Problem | What to check |
+| --- | --- |
+| UI opens, but analysis reports a missing checkpoint | Add both the selected segmenter and classifier weights at the paths above; the interface can open without them. |
+| Address already in use | Stop the existing server or start with `--port 8766` and use that URL. |
+| No samples appear | Upload an image, or add images under the optional `Classification/Testing/` layout and restart. No MRI samples ship with the repo. |
+| Metadata or calibration mismatch | Keep sidecars with their matching weights; select the recorded training segmenter and restart after replacing files. |
+| A training/test import is missing | Install `requirements-training.txt` or the complete `requirements.txt` in the same environment used to run the command. |
