@@ -31,6 +31,17 @@ data/ and models/        local datasets, generated patches, and trained weights
 
 ## Setup
 
+Source repository: [brain-tumor-mri](https://github.com/ChyoChan/brain-tumor-mri).
+
+Clone the public repository and enter its folder:
+
+```bash
+git clone https://github.com/ChyoChan/brain-tumor-mri.git
+cd brain-tumor-mri
+```
+
+Create the environment:
+
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
