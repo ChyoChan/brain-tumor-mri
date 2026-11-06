@@ -446,6 +446,7 @@ class PipelineRuntime:
             needs_gate = contract == "legacy_gate_v1"
             if classifier_mode == "full" or needs_gate or (explain and self._resolve_full_cls() is not None):
                 full_model = cls_model if classifier_mode == "full" else self._load_cls("full")
+            if classifier_mode == "full" or needs_gate:
                 with torch.inference_mode():
                     full_logits = full_model(orig_batch)
                     full_probs = torch.softmax(full_logits, dim=1)[0]

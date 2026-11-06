@@ -15,6 +15,8 @@ import torch.nn as nn
 from PIL import Image
 
 from src.constants import CLASS_NAMES
+from src.utils import get_device
+
 logger = logging.getLogger(__name__)
 
 
@@ -403,24 +405,13 @@ class CLIPReportGenerator:
     def _get_device(self) -> torch.device:
         """Auto-select the best available device."""
         device_str = str(self.device).strip().lower() if self.device is not None else "auto"
-        if not device_str:
-            device_str = "auto"
-
-        if device_str == "auto":
-            if torch.cuda.is_available():
-                return torch.device("cuda")
-            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                return torch.device("mps")
-            return torch.device("cpu")
+        if device_str in ("", "auto"):
+            return get_device()
         try:
             return torch.device(device_str)
         except Exception:
             logger.warning("Invalid device string '%s'; falling back to auto device.", self.device)
-            if torch.cuda.is_available():
-                return torch.device("cuda")
-            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                return torch.device("mps")
-            return torch.device("cpu")
+            return get_device()
 
     def load_model(self):
         """Load report decoder (MedGemma multimodal or causal text model)."""
@@ -476,9 +467,6 @@ Recorded model outputs:
 - Uncalibrated softmax score: {confidence:.1%}
 - Classifier attention focus: {focus_region}
 """
-
-    def _build_medgemma_instruction(self, predicted_class: int, confidence: float, focus_region: str) -> str:
-        return self._build_strong_prompt(predicted_class, confidence, focus_region)
 
     def _generate_text_with_causal_lm(self, prompt: str) -> str:
         tokenizer = self._tokenizer
@@ -601,7 +589,7 @@ Recorded model outputs:
                 return None
 
             if self._uses_medgemma():
-                instruction = self._build_medgemma_instruction(predicted_class, confidence, focus_region)
+                instruction = self._build_strong_prompt(predicted_class, confidence, focus_region)
                 generated_text = self._generate_text_with_medgemma(image, instruction)
             else:
                 prompt = self._build_strong_prompt(predicted_class, confidence, focus_region)

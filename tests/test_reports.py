@@ -1,5 +1,8 @@
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
+import torch
 from PIL import Image
 
 from src.constants import CLASS_NAMES
@@ -112,12 +115,46 @@ def test_summary_does_not_add_anatomical_causes_or_diagnostic_certainty():
     assert "recommended follow-up" not in summary.lower()
 
 
-def test_experimental_prompts_use_recorded_outputs_without_anatomical_heuristics():
+def test_experimental_prompts_use_recorded_outputs_without_anatomical_heuristics(monkeypatch):
     generator = CLIPReportGenerator(device="cpu")
     focus = "image coordinates x=25.0%, y=50.0% measured from the top-left corner"
     prompt = generator._build_strong_prompt(0, 0.8, focus)
-    assert prompt == generator._build_medgemma_instruction(0, 0.8, focus)
     assert "Uncalibrated softmax score: 80.0%" in prompt
     assert "Do not infer anatomy" in prompt
     assert "Do not provide treatment or follow-up advice" in prompt
     assert "no suspicious intracranial mass is identified" not in prompt
+    generator._decoder = object()
+    generator._processor = object()
+    decoder = Mock(return_value=(
+        "Findings: The classifier predicted glioma at the recorded image coordinates.\n"
+        "Impression: The uncalibrated model score is 80.0%.\n"
+        "Recommendation: These model outputs do not establish clinical findings."
+    ))
+    monkeypatch.setattr(generator, "_generate_text_with_medgemma", decoder)
+    image = Image.new("RGB", (4, 4))
+    assert generator._generate_structured_report(image, 0, "glioma", 0.8, focus)
+    decoder.assert_called_once_with(image, prompt)
+
+
+@pytest.mark.parametrize("override", ["auto", " AUTO ", "", None])
+def test_report_generator_auto_device_uses_shared_selection(monkeypatch, override):
+    selector = Mock(return_value=torch.device("mps"))
+    monkeypatch.setattr("src.explainability.get_device", selector)
+    assert CLIPReportGenerator(device=override)._get_device() == torch.device("mps")
+    selector.assert_called_once_with()
+
+
+@pytest.mark.parametrize("override,expected", [("cpu", "cpu"), (" CUDA:1 ", "cuda:1"), ("mps", "mps")])
+def test_report_generator_preserves_explicit_device(monkeypatch, override, expected):
+    selector = Mock(side_effect=AssertionError("Explicit device must bypass auto selection"))
+    monkeypatch.setattr("src.explainability.get_device", selector)
+    assert CLIPReportGenerator(device=override)._get_device() == torch.device(expected)
+    selector.assert_not_called()
+
+
+def test_report_generator_invalid_device_warns_and_uses_shared_selection(monkeypatch, caplog):
+    selector = Mock(return_value=torch.device("cpu"))
+    monkeypatch.setattr("src.explainability.get_device", selector)
+    assert CLIPReportGenerator(device="not-a-device")._get_device() == torch.device("cpu")
+    selector.assert_called_once_with()
+    assert "Invalid device string 'not-a-device'; falling back to auto device." in caplog.text

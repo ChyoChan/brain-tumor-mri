@@ -107,3 +107,57 @@ def test_runtime_applies_only_matching_validation_calibration(monkeypatch, tmp_p
     weights.write_bytes(b"changed")
     with pytest.raises(ValueError, match="checkpoint_sha256"):
         runtime.predict(image)
+
+
+@pytest.mark.parametrize("mode,contract", [
+    ("full", "full_image"), ("dual", "legacy_gate_v1"),
+    ("dual", "roi_v1"), ("cropped", "roi_v1"),
+])
+def test_reference_prediction_runs_only_for_full_mode_or_legacy_gate(monkeypatch, mode, contract):
+    runtime = object.__new__(inference.PipelineRuntime)
+    runtime.device = torch.device("cpu")
+    runtime._lock = threading.Lock()
+    runtime.input_size = 8
+    runtime.val_tf = lambda image: torch.zeros(3, 8, 8)
+    runtime._cls_metadata = {mode: {"crop_contract": contract}}
+    runtime._resolve_cls_path = lambda name: Path(f"{name}.pth")
+    runtime._resolve_seg_path = lambda name: Path("seg.pth")
+    runtime._resolve_full_cls = lambda: Path("full.pth")
+    runtime._load_seg = lambda name: torch.nn.Identity()
+    calls = {"reference_prediction": 0, "attention": 0, "roi_prediction": 0}
+
+    class Reference(torch.nn.Module):
+        layer4 = torch.nn.Identity()
+
+        def forward(self, batch):
+            key = "attention" if torch.is_grad_enabled() else "reference_prediction"
+            calls[key] += 1
+            return torch.tensor([[0., 0., 0., 10.]])
+
+    class ROI(torch.nn.Module):
+        def forward(self, batch):
+            calls["roi_prediction"] += 1
+            return torch.tensor([[10., 0., 0., 0.]])
+
+    reference = Reference()
+    runtime._load_cls = lambda name: reference if name == "full" else ROI()
+    monkeypatch.setattr(inference, "predict_mask", lambda *args: np.ones((8, 8), dtype=np.uint8))
+
+    def attention(model, batch, *args, **kwargs):
+        assert model is reference
+        with torch.enable_grad():
+            model(batch)
+        return np.arange(64, dtype=np.float32).reshape(8, 8) / 63
+
+    monkeypatch.setattr(inference, "generate_gradcam", attention)
+    result = runtime.analyze(Image.new("RGB", (8, 8)), "scan.png", "unet", mode, False)
+    assert calls == {
+        "reference_prediction": int(mode == "full" or contract == "legacy_gate_v1"),
+        "attention": 1,
+        "roi_prediction": int(mode != "full"),
+    }
+    assert result["images"]["gradcam"]
+    if contract == "roi_v1":
+        assert result["prediction"] == "glioma"
+        assert result["classifier_gate"] is None
+        assert not any("gate" in note for note in result["notes"])
